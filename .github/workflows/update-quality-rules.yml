@@ -11,6 +11,8 @@ on:
   # Allow manual trigger from GitHub UI
   workflow_dispatch:
 
+
+#vortegh pahem sranc?
 env:
   GCP_PROJECT_ID: sada-tirayr
   GCP_REGION: us-central1
@@ -20,7 +22,7 @@ env:
 jobs:
   update-quality-rules:
     name: Upload YAML and Update Dataplex Scan
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-latest #karogh a aveli tetev mi ban?
     
     permissions:
       contents: read
