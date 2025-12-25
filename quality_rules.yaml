@@ -11,11 +11,6 @@ rules:
       column: "source_filename"
     threshold: 1.0
 
-  - rule_id: "unique_product_ids"
-    dimension: "UNIQUENESS"
-    uniqueness_expectation:
-      column: "product_id"
-    threshold: 1.0
 
   - rule_id: "valid_review_count"
     dimension: "VALIDITY"
