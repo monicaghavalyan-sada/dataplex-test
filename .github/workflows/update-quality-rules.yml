@@ -2,7 +2,7 @@ name: Update Dataplex Quality Rules
 
 # Trigger on push to main when quality_rules.yaml changes
 on:
-  push:
+  push: #marge aneluc ba?
     branches:
       - main
     paths:
