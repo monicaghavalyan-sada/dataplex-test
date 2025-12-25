@@ -1,0 +1,39 @@
+# Terraform
+**/.terraform/*
+*.tfstate
+*.tfstate.*
+*.tfvars
+terraform.tfvars
+crash.log
+*.tfplan
+.terraform.lock.hcl
+
+# Service Account Keys (never commit!)
+*.json
+!terraform/*.json
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+.env
+venv/
+ENV/
+
+# Backups
+*.backup
+*.bak
+
+# Logs
+*.log
