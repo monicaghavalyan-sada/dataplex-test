@@ -50,14 +50,36 @@ jobs:
           gsutil cp quality_rules.yaml gs://${BUCKET_NAME}/backups/quality_rules_${TIMESTAMP}.yaml
           echo "Upload complete"
       
-      - name: Update Dataplex Scan
+      - name: Create or Update Dataplex Scan
         run: |
-          echo "Updating Dataplex scan configuration"
-          gcloud dataplex datascans update ${SCAN_NAME} \
-            --location=${GCP_REGION} \
-            --project=${GCP_PROJECT_ID} \
-            --data-quality-spec-file=quality_rules.yaml
-          echo "Scan configuration updated"
+          echo "Checking if scan exists"
+          
+          # Check if scan exists
+          if gcloud dataplex datascans describe sentiment-quality-scan \
+              --location=${GCP_REGION} \
+              --project=${GCP_PROJECT_ID} 2>/dev/null; then
+            
+            echo "Scan exists, updating"
+            gcloud dataplex datascans update ${SCAN_NAME} \
+              --location=${GCP_REGION} \
+              --project=${GCP_PROJECT_ID} \
+              --data-quality-spec-file=quality_rules.yaml
+          
+          else
+            
+            echo "Scan does not exist, creating"
+            gcloud dataplex datascans create ${SCAN_NAME} \
+              --location=${GCP_REGION} \
+              --project=${GCP_PROJECT_ID} \
+              --data-source-resource="//bigquery.googleapis.com/projects/${GCP_PROJECT_ID}/datasets/sentiment_analysis/tables/product_sentiment_summary" \
+              --data-quality-spec-file=quality_rules.yaml \
+              --schedule="0 2 * * *" \
+              --description="Daily data quality scan" \
+              --display-name="Product Sentiment Quality Scan"
+          
+          fi
+          
+          echo "Scan ready"
       
       - name: Trigger Scan Execution
         run: |
