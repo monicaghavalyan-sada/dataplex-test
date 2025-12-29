@@ -1,5 +1,5 @@
 rules:
-  - ruleId: "no-null-product-ids"  # Changed from no_null_product_ids
+  - ruleId: no-null-product-ids  # Changed from no_null_product_ids
     dimension: "COMPLETENESS"
     nonNullExpectation:
       column: "product_id"        # Keep underscores (BQ column name)
