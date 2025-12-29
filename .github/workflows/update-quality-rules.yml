@@ -54,32 +54,38 @@ jobs:
         run: |
           echo "Checking if scan exists"
           
-          if gcloud dataplex datascans describe ${SCAN_NAME} \
-              --location=${GCP_REGION} \
-              --project=${GCP_PROJECT_ID} 2>/dev/null; then
+          # Check if scan exists
+          if gcloud dataplex datascans describe sentiment-quality-scan \
+              --location=us-central1 \
+              --project=sada-tirayr &>/dev/null; then
             
-            echo "Scan exists, updating"
-            gcloud dataplex datascans update ${SCAN_NAME} \
-              --location=${GCP_REGION} \
-              --project=${GCP_PROJECT_ID} \
+            echo "Scan exists - updating"
+            gcloud dataplex datascans update sentiment-quality-scan \
+              --location=us-central1 \
+              --project=sada-tirayr \
               --data-quality-spec-file=quality_rules.yaml
-          
+            echo "Update complete"
+            
           else
             
-            echo "Scan does not exist, creating"
-            gcloud dataplex datascans create \
-              --data-scan-id=${SCAN_NAME} \
-              --location=${GCP_REGION} \
-              --project=${GCP_PROJECT_ID} \
-              --data-source-resource="//bigquery.googleapis.com/projects/${GCP_PROJECT_ID}/datasets/sentiment_analysis/tables/product_sentiment_summary" \
-              --data-quality-spec-file=quality_rules.yaml \
-              --schedule="0 2 * * *" \
+            echo "Scan does not exist - creating"
+            
+            # First, upload YAML if not already there
+            gsutil cp quality_rules.yaml gs://sada-tirayr-dataplex-sources/ 2>/dev/null || true
+            
+            # Create the scan
+            gcloud dataplex datascans create sentiment-quality-scan \
+              --location=us-central1 \
+              --project=sada-tirayr \
+              --data resource="//bigquery.googleapis.com/projects/sada-tirayr/datasets/sentiment_analysis/tables/product_sentiment_summary" \
+              --data-quality-spec file=gs://sada-tirayr-dataplex-sources/quality_rules.yaml \
+              --execution-spec trigger-schedule-cron="0 2 * * *" \
               --description="Daily data quality scan" \
               --display-name="Product Sentiment Quality Scan"
-          
+            
+            echo "Create complete"
+            
           fi
-          
-          echo "Scan ready"
       
       - name: Trigger Scan Execution
         run: |
