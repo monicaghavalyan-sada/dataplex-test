@@ -1,5 +1,10 @@
 rules:
-  NO_NULL_PRODUCT_IDS:
-    rule_type: NOT_NULL
-    dimension: completeness
-    column_id: product_id  
+  - nonNullExpectation: {}
+    column: product_id
+    dimension: COMPLETENESS
+    threshold: 0.9
+
+  - nonNullExpectation: {}
+    column: source_filename
+    dimension: COMPLETENESS
+    threshold: 1.0
