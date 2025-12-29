@@ -54,8 +54,7 @@ jobs:
         run: |
           echo "Checking if scan exists"
           
-          # Check if scan exists
-          if gcloud dataplex datascans describe sentiment-quality-scan \
+          if gcloud dataplex datascans describe ${SCAN_NAME} \
               --location=${GCP_REGION} \
               --project=${GCP_PROJECT_ID} 2>/dev/null; then
             
@@ -68,7 +67,8 @@ jobs:
           else
             
             echo "Scan does not exist, creating"
-            gcloud dataplex datascans create ${SCAN_NAME} \
+            gcloud dataplex datascans create \
+              --data-scan-id=${SCAN_NAME} \
               --location=${GCP_REGION} \
               --project=${GCP_PROJECT_ID} \
               --data-source-resource="//bigquery.googleapis.com/projects/${GCP_PROJECT_ID}/datasets/sentiment_analysis/tables/product_sentiment_summary" \
@@ -79,7 +79,7 @@ jobs:
           
           fi
           
-          echo "Scan ready"
+    echo "Scan ready"
       
       - name: Trigger Scan Execution
         run: |
