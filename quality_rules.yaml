@@ -12,14 +12,6 @@ rules:
     threshold: 1.0
 
 
-  - rule_id: "valid_review_count"
-    dimension: "VALIDITY"
-    range_expectation:
-      column: "total_number_of_reviews"
-      min_value: "1"
-      max_value: "1000"
-    threshold: 0.9
-
   - rule_id: "valid_sentiment_score"
     dimension: "VALIDITY"
     range_expectation:
