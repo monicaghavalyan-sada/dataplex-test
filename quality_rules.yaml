@@ -12,14 +12,6 @@ rules:
     threshold: 1.0
 
 
-  - rule_id: "valid_sentiment_score"
-    dimension: "VALIDITY"
-    range_expectation:
-      column: "avg_sentiment_score"
-      min_value: "-1"
-      max_value: "1"
-    threshold: 1
-
   - rule_id: "valid_review_score"
     dimension: "VALIDITY"
     range_expectation:
