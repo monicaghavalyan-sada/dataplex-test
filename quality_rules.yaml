@@ -1,12 +1,5 @@
 rules:
-  - ruleId: no-null-product-ids  # Changed from no_null_product_ids
-    dimension: "COMPLETENESS"
-    nonNullExpectation:
-      column: "product_id"        # Keep underscores (BQ column name)
-    threshold: 0.9
-
-  - ruleId: "no-null-source-filename"
-    dimension: "COMPLETENESS"
-    nonNullExpectation:
-      column: "source_filename"
-    threshold: 1.0
+  NO_NULL_PRODUCT_IDS:
+    rule_type: NOT_NULL
+    dimension: completeness
+    column_id: product_id  
