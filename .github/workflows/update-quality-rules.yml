@@ -79,7 +79,7 @@ jobs:
           
           fi
           
-    echo "Scan ready"
+          echo "Scan ready"
       
       - name: Trigger Scan Execution
         run: |
