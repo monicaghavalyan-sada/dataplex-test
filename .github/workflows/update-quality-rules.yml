@@ -1,109 +1,68 @@
 name: Update Dataplex Quality Rules
 
-# Trigger on push to main when quality_rules.yaml changes
 on:
-  push: #marge aneluc ba?
+  push:
     branches:
       - main
     paths:
       - 'quality_rules.yaml'
-  
-  # Allow manual trigger from GitHub UI
   workflow_dispatch:
 
-
-#vortegh pahem sranc?
 env:
-  GCP_PROJECT_ID: sada-tirayr
-  GCP_REGION: us-central1
-  BUCKET_NAME: sada-tirayr-dataplex-sources
-  SCAN_NAME: sentiment-quality-scan
+  GCP_PROJECT_ID: ${{ vars.GCP_PROJECT_ID }}
+  GCP_REGION: ${{ vars.GCP_REGION }}
+  BUCKET_NAME: ${{ vars.BUCKET_NAME }}
+  SCAN_NAME: ${{ vars.SCAN_NAME }}
 
 jobs:
   update-quality-rules:
     name: Upload YAML and Update Dataplex Scan
-    runs-on: ubuntu-latest #karogh a aveli tetev mi ban?
+    runs-on: ubuntu-latest
     
     permissions:
       contents: read
-      id-token: write  # Required for Workload Identity Federation
+      id-token: write
     
     steps:
-      # Step 1: Checkout repository
       - name: Checkout Code
         uses: actions/checkout@v4
       
-      # Step 2: Authenticate to Google Cloud using Workload Identity
-      # TODO: Replace WORKLOAD_IDENTITY_PROVIDER with actual value from manager
       - name: Authenticate to GCP
-        id: auth
-        uses: google-github-actions/auth@v2
+        uses: google-github-actions/auth@v3
         with:
+          project_id: ${{ env.GCP_PROJECT_ID }}
           workload_identity_provider: 'projects/437177264669/locations/global/workloadIdentityPools/github/providers/my-repo'
-          service_account: 'github-actions-sa@sada-tirayr.iam.gserviceaccount.com'
-      
-      # Step 3: Set up Cloud SDK
+          
       - name: Set up Cloud SDK
         uses: google-github-actions/setup-gcloud@v2
       
-      # Step 4: Validate quality_rules.yaml
       - name: Validate YAML Syntax
         run: |
-          echo "📋 Validating quality_rules.yaml syntax..."
+          echo "Validating YAML syntax"
           python3 -c "import yaml; yaml.safe_load(open('quality_rules.yaml'))"
-          echo "✅ YAML syntax is valid!"
+          echo "Validation successful"
       
-      # Step 5: Upload to GCS (with versioning)
-      - name: Upload quality_rules.yaml to GCS
+      - name: Upload to GCS
         run: |
-          echo "📤 Uploading quality_rules.yaml to gs://${BUCKET_NAME}/"
-          
-          # Upload with timestamp backup
+          echo "Uploading quality_rules.yaml to GCS"
           TIMESTAMP=$(date +%Y%m%d_%H%M%S)
           gsutil cp quality_rules.yaml gs://${BUCKET_NAME}/quality_rules.yaml
           gsutil cp quality_rules.yaml gs://${BUCKET_NAME}/backups/quality_rules_${TIMESTAMP}.yaml
-          
-          echo "✅ Upload complete!"
-          echo "   Current: gs://${BUCKET_NAME}/quality_rules.yaml"
-          echo "   Backup:  gs://${BUCKET_NAME}/backups/quality_rules_${TIMESTAMP}.yaml"
+          echo "Upload complete"
       
-      # Step 6: Update Dataplex Quality Scan
-      - name: Update Dataplex Quality Scan
+      - name: Update Dataplex Scan
         run: |
-          echo "🔄 Updating Dataplex quality scan with new rules..."
-          
+          echo "Updating Dataplex scan configuration"
           gcloud dataplex datascans update ${SCAN_NAME} \
             --location=${GCP_REGION} \
             --project=${GCP_PROJECT_ID} \
             --data-quality-spec-file=quality_rules.yaml
-          
-          echo "✅ Quality scan updated successfully!"
+          echo "Scan configuration updated"
       
-      # Step 7: Trigger scan run (optional - for immediate testing)
-      - name: Trigger Quality Scan Run
+      - name: Trigger Scan Execution
         run: |
-          echo "▶️ Triggering immediate scan run for testing..."
-          
+          echo "Triggering scan execution"
           gcloud dataplex datascans run ${SCAN_NAME} \
             --location=${GCP_REGION} \
             --project=${GCP_PROJECT_ID}
-          
-          echo "✅ Scan triggered!"
-          echo "   View results in ~2-3 minutes at:"
-          echo "   https://console.cloud.google.com/dataplex/data-quality?project=${GCP_PROJECT_ID}"
-      
-      # Step 8: Summary
-      - name: Job Summary
-        run: |
-          echo "## 🎉 Quality Rules Update Complete!" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "### What Happened:" >> $GITHUB_STEP_SUMMARY
-          echo "- ✅ Validated YAML syntax" >> $GITHUB_STEP_SUMMARY
-          echo "- ✅ Uploaded quality_rules.yaml to GCS" >> $GITHUB_STEP_SUMMARY
-          echo "- ✅ Updated Dataplex scan configuration" >> $GITHUB_STEP_SUMMARY
-          echo "- ✅ Triggered scan run" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "### Next Steps:" >> $GITHUB_STEP_SUMMARY
-          echo "1. Wait 2-3 minutes for scan to complete" >> $GITHUB_STEP_SUMMARY
-          echo "2. Check results in BigQuery: \`${GCP_PROJECT_ID}.dataplex_scans.quality_scan_results\`" >> $GITHUB_STEP_SUMMARY
-          echo "3. View in console: [Dataplex Data Quality](https://console.cloud.google.com/dataplex/data-quality?project=${GCP_PROJECT_ID})" >> $GITHUB_STEP_SUMMARY
+          echo "Scan triggered successfully"
