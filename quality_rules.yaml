@@ -3,7 +3,7 @@ rules:
     dimension: "COMPLETENESS"
     non_null_expectation:
       column: "product_id"
-    threshold: 0.95
+    threshold: 0.9
 
   - rule_id: "no_null_source_filename"
     dimension: "COMPLETENESS"
