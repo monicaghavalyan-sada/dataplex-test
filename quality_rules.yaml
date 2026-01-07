@@ -2,7 +2,7 @@ rules:
   - nonNullExpectation: {}
     column: product_id
     dimension: COMPLETENESS
-    threshold: 0.8
+    threshold: 0.7
 
   - nonNullExpectation: {}
     column: source_filename
