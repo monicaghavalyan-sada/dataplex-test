@@ -1,0 +1,105 @@
+rules:
+  - rangeExpectation:
+      minValue: '1'
+      maxValue: '1000'
+    column: total_number_of_reviews
+    dimension: VALIDITY
+    threshold: 0.9
+
+  - rangeExpectation:
+      minValue: '-1'
+      maxValue: '1'
+    column: avg_sentiment_score
+    dimension: VALIDITY
+    threshold: 1.0
+
+  - rangeExpectation:
+      minValue: '0'
+      maxValue: '5'
+    column: avg_review_score
+    dimension: VALIDITY
+    threshold: 1.0
+
+  - rangeExpectation:
+      minValue: '0'
+      maxValue: '100'
+    column: pct_without_text_review
+    dimension: VALIDITY
+    threshold: 1.0
+
+  - rangeExpectation:
+      minValue: '0'
+      maxValue: '100'
+    column: very_satisfied_pct
+    dimension: VALIDITY
+    threshold: 1.0
+
+  - rangeExpectation:
+      minValue: '0'
+      maxValue: '100'
+    column: somewhat_satisfied_pct
+    dimension: VALIDITY
+    threshold: 1.0
+
+  - rangeExpectation:
+      minValue: '0'
+      maxValue: '100'
+    column: neutral_pct
+    dimension: VALIDITY
+    threshold: 1.0
+
+  - rangeExpectation:
+      minValue: '0'
+      maxValue: '100'
+    column: somewhat_dissatisfied_pct
+    dimension: VALIDITY
+    threshold: 1.0
+
+  - rangeExpectation:
+      minValue: '0'
+      maxValue: '100'
+    column: very_dissatisfied_pct
+    dimension: VALIDITY
+    threshold: 1.0
+
+  - rangeExpectation:
+      minValue: '0'
+      maxValue: '100'
+    column: pct_without_score_review
+    dimension: VALIDITY
+    threshold: 1.0
+
+  - rangeExpectation:
+      minValue: '0'
+      maxValue: '100'
+    column: score_5_pct
+    dimension: VALIDITY
+    threshold: 1.0
+
+  - rangeExpectation:
+      minValue: '0'
+      maxValue: '100'
+    column: score_4_pct
+    dimension: VALIDITY
+    threshold: 1.0
+
+  - rangeExpectation:
+      minValue: '0'
+      maxValue: '100'
+    column: score_3_pct
+    dimension: VALIDITY
+    threshold: 1.0
+
+  - rangeExpectation:
+      minValue: '0'
+      maxValue: '100'
+    column: score_2_pct
+    dimension: VALIDITY
+    threshold: 1.0
+
+  - rangeExpectation:
+      minValue: '0'
+      maxValue: '100'
+    column: score_1_pct
+    dimension: VALIDITY
+    threshold: 1.0
