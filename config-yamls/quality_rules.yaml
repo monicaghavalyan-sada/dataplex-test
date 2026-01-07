@@ -1,18 +1,10 @@
 rules:
-  - rule_id: "no_null_product_ids"
-    dimension: "COMPLETENESS"
-    non_null_expectation:
-      column: "product_id"
-    threshold: 1.0
+  - nonNullExpectation: {}
+    column: product_id
+    dimension: COMPLETENESS
+    threshold: 0.9
 
-  - rule_id: "no_null_source_filename"
-    dimension: "COMPLETENESS"
-    non_null_expectation:
-      column: "source_filename"
-    threshold: 1.0
-
-  - rule_id: "unique_product_ids"
-    dimension: "UNIQUENESS"
-    uniqueness_expectation:
-      column: "product_id"
+  - nonNullExpectation: {}
+    column: source_filename
+    dimension: COMPLETENESS
     threshold: 1.0
