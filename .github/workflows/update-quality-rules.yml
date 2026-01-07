@@ -50,7 +50,7 @@ jobs:
           gsutil cp quality_rules.yaml gs://${BUCKET_NAME}/backups/quality_rules_${TIMESTAMP}.yaml
           echo "Upload complete"
       
-      - name: Delete and Recreate Scan
+      - name: Create or Update Scan
         run: |
           echo "Checking if scan exists"
           
@@ -58,28 +58,26 @@ jobs:
               --location=us-central1 \
               --project=sada-tirayr &>/dev/null; then
             
-            echo "Scan exists - deleting"
-            gcloud dataplex datascans delete sentiment-quality-scan \
+            echo "Scan exists - updating configuration"
+            gcloud dataplex datascans update sentiment-quality-scan \
               --location=us-central1 \
               --project=sada-tirayr \
-              --quiet
+              --data-quality-spec-file=quality_rules.yaml
             
-            echo "Waiting for deletion to complete"
-            sleep 5
+            echo "Scan updated successfully"
             
           else
-            echo "Scan does not exist"
+            
+            echo "Scan does not exist - creating new scan"
+            gcloud dataplex datascans create data-quality sentiment-quality-scan \
+              --location=us-central1 \
+              --project=sada-tirayr \
+              --data-source-resource="//bigquery.googleapis.com/projects/sada-tirayr/datasets/sentiment_analysis/tables/product_sentiment_summary" \
+              --data-quality-spec-file=gs://sada-tirayr-dataplex-sources/quality_rules.yaml \
+              --schedule="0 2 * * *" \
+              --description="Daily data quality scan" \
+              --display-name="Product Sentiment Quality Scan"
+            
+            echo "Scan created successfully"
+            
           fi
-          
-          echo "Creating scan"
-          gcloud dataplex datascans create data-quality sentiment-quality-scan \
-            --location=us-central1 \
-            --project=sada-tirayr \
-            --data-source-resource="//bigquery.googleapis.com/projects/sada-tirayr/datasets/sentiment_analysis/tables/product_sentiment_summary" \
-            --data-quality-spec-file=gs://sada-tirayr-dataplex-sources/quality_rules.yaml \
-            --schedule="0 2 * * *" \
-            --description="Daily data quality scan" \
-            --display-name="Product Sentiment Quality Scan"
-          
-          echo "Scan created successfully"
-      
