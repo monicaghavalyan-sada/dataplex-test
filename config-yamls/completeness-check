@@ -1,0 +1,10 @@
+rules:
+  - nonNullExpectation: {}
+    column: product_id
+    dimension: COMPLETENESS
+    threshold: 0.9
+
+  - nonNullExpectation: {}
+    column: source_filename
+    dimension: COMPLETENESS
+    threshold: 1.0
