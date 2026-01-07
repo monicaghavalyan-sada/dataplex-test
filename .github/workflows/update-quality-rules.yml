@@ -1,22 +1,23 @@
-name: Update Dataplex Quality Rules
+name: Update Dataplex Quality Scans
 
 on:
   push:
     branches:
       - main
     paths:
-      - 'quality_rules.yaml'
+      - 'config-yamls/*.yaml'
   workflow_dispatch:
 
 env:
-  GCP_PROJECT_ID: ${{ vars.GCP_PROJECT_ID }}
-  GCP_REGION: ${{ vars.GCP_REGION }}
-  BUCKET_NAME: ${{ vars.BUCKET_NAME }}
-  SCAN_NAME: ${{ vars.SCAN_NAME }}
+  GCP_PROJECT_ID: sada-tirayr
+  GCP_REGION: us-central1
+  BUCKET_NAME: sada-tirayr-dataplex-sources
+  BIGQUERY_DATASET: sentiment_analysis
+  BIGQUERY_TABLE: product_sentiment_summary
 
 jobs:
-  update-quality-rules:
-    name: Upload YAML and Update Dataplex Scan
+  update-quality-scans:
+    name: Process Changed YAML Files
     runs-on: ubuntu-latest
     
     permissions:
@@ -26,6 +27,8 @@ jobs:
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 2  # Need this to detect changed files
       
       - name: Authenticate to GCP
         uses: google-github-actions/auth@v3
@@ -37,48 +40,88 @@ jobs:
       - name: Set up Cloud SDK
         uses: google-github-actions/setup-gcloud@v2
       
-      - name: Validate YAML Syntax
+      - name: Get Changed Files
+        id: changed-files
         run: |
-          echo "Validating YAML syntax"
-          python3 -c "import yaml; yaml.safe_load(open('quality_rules.yaml'))"
-          echo "Validation successful"
-      
-      - name: Upload to GCS
-        run: |
-          echo "Uploading quality_rules.yaml to GCS"
-          TIMESTAMP=$(date +%Y%m%d_%H%M%S)
-          gsutil cp quality_rules.yaml gs://${BUCKET_NAME}/quality_rules.yaml
-          gsutil cp quality_rules.yaml gs://${BUCKET_NAME}/backups/quality_rules_${TIMESTAMP}.yaml
-          echo "Upload complete"
-      
-      - name: Create or Update Scan
-        run: |
-          echo "Checking if scan exists"
+          # Get list of changed YAML files in config-yamls folder
+          CHANGED_FILES=$(git diff --name-only HEAD~1 HEAD | grep '^config-yamls/.*\.yaml$' || true)
           
-          if gcloud dataplex datascans describe ${SCAN_NAME} \
-              --location=${GCP_REGION} \
-              --project=${GCP_PROJECT_ID} &>/dev/null; then
-            
-            echo "Scan exists - updating configuration"
-            gcloud dataplex datascans update data-quality ${SCAN_NAME} \
-              --location=${GCP_REGION} \
-              --project=${GCP_PROJECT_ID} \
-              --data-quality-spec-file=quality_rules.yaml
-            
-            echo "Scan updated successfully"
-            
+          if [ -z "$CHANGED_FILES" ]; then
+            echo "No YAML files changed in config-yamls/"
+            echo "files=" >> $GITHUB_OUTPUT
           else
-            
-            echo "Scan does not exist - creating new scan"
-            gcloud dataplex datascans create data-quality ${SCAN_NAME} \
-              --location=${GCP_REGION} \
-              --project=${GCP_PROJECT_ID} \
-              --data-source-resource="//bigquery.googleapis.com/projects/${GCP_PROJECT_ID}/datasets/sentiment_analysis/tables/product_sentiment_summary" \
-              --data-quality-spec-file=gs://${BUCKET_NAME}/quality_rules.yaml \
-              --schedule="0 2 * * *" \
-              --description="Daily data quality scan" \
-              --display-name="Product Sentiment Quality Scan"
-            
-            echo "Scan created successfully"
-            
+            echo "Changed files:"
+            echo "$CHANGED_FILES"
+            # Convert to JSON array
+            FILES_JSON=$(echo "$CHANGED_FILES" | jq -R -s -c 'split("\n") | map(select(length > 0))')
+            echo "files=$FILES_JSON" >> $GITHUB_OUTPUT
           fi
+      
+      - name: Process Each Changed YAML
+        if: steps.changed-files.outputs.files != ''
+        run: |
+          FILES='${{ steps.changed-files.outputs.files }}'
+          
+          echo "$FILES" | jq -r '.[]' | while read -r FILE; do
+            echo "========================================="
+            echo "Processing: $FILE"
+            echo "========================================="
+            
+            # Extract filename without path and extension
+            FILENAME=$(basename "$FILE" .yaml)
+            SCAN_NAME="${FILENAME}-scan"
+            
+            echo "File: $FILE"
+            echo "Scan name: $SCAN_NAME"
+            
+            # Validate YAML syntax
+            echo "Validating YAML syntax..."
+            python3 -c "import yaml; yaml.safe_load(open('$FILE'))" || {
+              echo "ERROR: Invalid YAML syntax in $FILE"
+              exit 1
+            }
+            echo "Validation successful"
+            
+            # Upload to GCS
+            echo "Uploading to GCS..."
+            TIMESTAMP=$(date +%Y%m%d_%H%M%S)
+            gsutil cp "$FILE" "gs://${BUCKET_NAME}/config-yamls/${FILENAME}.yaml"
+            gsutil cp "$FILE" "gs://${BUCKET_NAME}/config-yamls/backups/${FILENAME}_${TIMESTAMP}.yaml"
+            echo "Upload complete"
+            
+            # Check if scan exists
+            echo "Checking if scan exists..."
+            if gcloud dataplex datascans describe "$SCAN_NAME" \
+                --location="${GCP_REGION}" \
+                --project="${GCP_PROJECT_ID}" &>/dev/null; then
+              
+              echo "Scan exists - updating configuration"
+              gcloud dataplex datascans update data-quality "$SCAN_NAME" \
+                --location="${GCP_REGION}" \
+                --project="${GCP_PROJECT_ID}" \
+                --data-quality-spec-file="$FILE"
+              
+              echo "✅ Scan updated: $SCAN_NAME"
+              
+            else
+              
+              echo "Scan does not exist - creating new scan"
+              gcloud dataplex datascans create data-quality "$SCAN_NAME" \
+                --location="${GCP_REGION}" \
+                --project="${GCP_PROJECT_ID}" \
+                --data-source-resource="//bigquery.googleapis.com/projects/${GCP_PROJECT_ID}/datasets/${BIGQUERY_DATASET}/tables/${BIGQUERY_TABLE}" \
+                --data-quality-spec-file="gs://${BUCKET_NAME}/config-yamls/${FILENAME}.yaml" \
+                --schedule="0 2 * * *" \
+                --description="Automated quality scan for ${FILENAME}" \
+                --display-name="${SCAN_NAME}"
+              
+              echo "✅ Scan created: $SCAN_NAME"
+              
+            fi
+            
+            echo ""
+          done
+          
+          echo "========================================="
+          echo "All scans processed successfully!"
+          echo "========================================="
