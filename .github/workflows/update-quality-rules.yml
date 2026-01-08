@@ -6,7 +6,6 @@ on:
       - main
     paths:
       - 'config-yamls/**/*.yaml'
-  workflow_dispatch:
 
 env:
   GCP_PROJECT_ID: ${{ vars.GCP_PROJECT_ID }}
@@ -26,7 +25,7 @@ jobs:
       - name: Checkout Code
         uses: actions/checkout@v4
         with:
-          fetch-depth: 2
+          fetch-depth: 2 #looks at last 2 commits
       
       - name: Authenticate to GCP
         uses: google-github-actions/auth@v3
