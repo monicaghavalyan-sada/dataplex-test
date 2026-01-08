@@ -7,6 +7,6 @@
 
 
 6. optimize CI/CD code loops
-7. if dataset not canged, update not delete
+7. if dataset not changed, update not delete
 8. review how WIF with/without SA works
 9. ReadME
