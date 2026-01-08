@@ -5,15 +5,13 @@ on:
     branches:
       - main
     paths:
-      - 'config-yamls/*.yaml'
+      - 'config-yamls/**/*.yaml'
   workflow_dispatch:
 
 env:
   GCP_PROJECT_ID: ${{ vars.GCP_PROJECT_ID }}
   GCP_REGION: ${{ vars.GCP_REGION }}
   BUCKET_NAME: ${{ vars.BUCKET_NAME }}
-  BIGQUERY_DATASET: ${{ vars.BIGQUERY_DATASET }}
-  BIGQUERY_TABLE: ${{ vars.BIGQUERY_TABLE }}
 
 jobs:
   update-quality-scans:
@@ -40,60 +38,109 @@ jobs:
       - name: Set up Cloud SDK
         uses: google-github-actions/setup-gcloud@v2
       
-      - name: Get Changed Files
-        id: changed-files
+      - name: Get Changed Folders
+        id: changed-folders
         run: |
           CHANGED_FILES=$(git diff --name-only HEAD~1 HEAD | grep '^config-yamls/.*\.yaml$' || true)
           
           if [ -z "$CHANGED_FILES" ]; then
-            echo "files=" >> $GITHUB_OUTPUT
+            echo "folders=" >> $GITHUB_OUTPUT
           else
-            FILES_JSON=$(echo "$CHANGED_FILES" | jq -R -s -c 'split("\n") | map(select(length > 0))')
-            echo "files=$FILES_JSON" >> $GITHUB_OUTPUT
+            FOLDERS=$(echo "$CHANGED_FILES" | sed 's|/[^/]*$||' | sort -u)
+            FOLDERS_JSON=$(echo "$FOLDERS" | jq -R -s -c 'split("\n") | map(select(length > 0))')
+            echo "folders=$FOLDERS_JSON" >> $GITHUB_OUTPUT
+            
+            echo "$CHANGED_FILES" > /tmp/changed_files.txt
           fi
       
-      - name: Process Each Changed YAML
-        if: steps.changed-files.outputs.files != ''
+      - name: Process Each Folder
+        if: steps.changed-folders.outputs.folders != ''
         run: |
-          FILES='${{ steps.changed-files.outputs.files }}'
+          FOLDERS='${{ steps.changed-folders.outputs.folders }}'
           
-          echo "$FILES" | jq -r '.[]' | while read -r FILE; do
-            FILENAME=$(basename "$FILE" .yaml)
+          echo "$FOLDERS" | jq -r '.[]' | while read -r FOLDER; do
+            FOLDER_NAME=$(basename "$FOLDER")
             
-            SCAN_NAME=$(echo "$FILENAME" | \
+            SCAN_NAME=$(echo "$FOLDER_NAME" | \
               tr '[:upper:]' '[:lower:]' | \
               sed 's/[^a-z0-9-]/-/g' | \
               sed 's/-\+/-/g' | \
               sed 's/^-//;s/-$//')-scan
             
-            echo "Processing: $FILE -> $SCAN_NAME"
+            echo "Processing folder: $FOLDER_NAME -> $SCAN_NAME"
             
-            python3 -c "import yaml; yaml.safe_load(open('$FILE'))" || exit 1
+            if [ ! -f "$FOLDER/config.yaml" ] || [ ! -f "$FOLDER/rules.yaml" ]; then
+              echo "ERROR: Missing config.yaml or rules.yaml in $FOLDER"
+              exit 1
+            fi
+            
+            python3 -c "import yaml; yaml.safe_load(open('$FOLDER/config.yaml'))" || exit 1
+            python3 -c "import yaml; yaml.safe_load(open('$FOLDER/rules.yaml'))" || exit 1
+            
+            DATASET=$(python3 -c "import yaml; print(yaml.safe_load(open('$FOLDER/config.yaml'))['dataset'])")
+            TABLE=$(python3 -c "import yaml; print(yaml.safe_load(open('$FOLDER/config.yaml'))['table'])")
+            SCHEDULE=$(python3 -c "import yaml; print(yaml.safe_load(open('$FOLDER/config.yaml'))['schedule'])")
+            DESCRIPTION=$(python3 -c "import yaml; print(yaml.safe_load(open('$FOLDER/config.yaml'))['description'])")
+            DISPLAY_NAME=$(python3 -c "import yaml; print(yaml.safe_load(open('$FOLDER/config.yaml'))['display_name'])")
             
             TIMESTAMP=$(date +%Y%m%d_%H%M%S)
-            gsutil cp "$FILE" "gs://${BUCKET_NAME}/config-yamls/${FILENAME}.yaml"
-            gsutil cp "$FILE" "gs://${BUCKET_NAME}/config-yamls/backups/${FILENAME}_${TIMESTAMP}.yaml"
+            gsutil cp "$FOLDER/rules.yaml" "gs://${BUCKET_NAME}/config-yamls/${FOLDER_NAME}/rules.yaml"
+            gsutil cp "$FOLDER/config.yaml" "gs://${BUCKET_NAME}/config-yamls/${FOLDER_NAME}/config.yaml"
+            gsutil cp "$FOLDER/rules.yaml" "gs://${BUCKET_NAME}/config-yamls/${FOLDER_NAME}/backups/rules_${TIMESTAMP}.yaml"
+            gsutil cp "$FOLDER/config.yaml" "gs://${BUCKET_NAME}/config-yamls/${FOLDER_NAME}/backups/config_${TIMESTAMP}.yaml"
             
-            if gcloud dataplex datascans describe "$SCAN_NAME" \
-                --location="${GCP_REGION}" \
-                --project="${GCP_PROJECT_ID}" &>/dev/null; then
+            CONFIG_CHANGED=$(grep -q "$FOLDER/config.yaml" /tmp/changed_files.txt && echo "true" || echo "false")
+            
+            if [ "$CONFIG_CHANGED" = "true" ]; then
+              echo "Config changed - recreating scan"
               
-              gcloud dataplex datascans update data-quality "$SCAN_NAME" \
-                --location="${GCP_REGION}" \
-                --project="${GCP_PROJECT_ID}" \
-                --data-quality-spec-file="$FILE"
+              if gcloud dataplex datascans describe "$SCAN_NAME" \
+                  --location="${GCP_REGION}" \
+                  --project="${GCP_PROJECT_ID}" &>/dev/null; then
+                gcloud dataplex datascans delete "$SCAN_NAME" \
+                  --location="${GCP_REGION}" \
+                  --project="${GCP_PROJECT_ID}" \
+                  --quiet
+                echo "Deleted: $SCAN_NAME"
+                sleep 5
+              fi
               
-              echo "Updated: $SCAN_NAME"
-            else
               gcloud dataplex datascans create data-quality "$SCAN_NAME" \
                 --location="${GCP_REGION}" \
                 --project="${GCP_PROJECT_ID}" \
-                --data-source-resource="//bigquery.googleapis.com/projects/${GCP_PROJECT_ID}/datasets/${BIGQUERY_DATASET}/tables/${BIGQUERY_TABLE}" \
-                --data-quality-spec-file="gs://${BUCKET_NAME}/config-yamls/${FILENAME}.yaml" \
-                --schedule="0 2 * * *" \
-                --description="Automated quality scan for ${FILENAME}" \
-                --display-name="${SCAN_NAME}"
+                --data-source-resource="//bigquery.googleapis.com/projects/${GCP_PROJECT_ID}/datasets/${DATASET}/tables/${TABLE}" \
+                --data-quality-spec-file="gs://${BUCKET_NAME}/config-yamls/${FOLDER_NAME}/rules.yaml" \
+                --schedule="$SCHEDULE" \
+                --description="$DESCRIPTION" \
+                --display-name="$DISPLAY_NAME"
               
               echo "Created: $SCAN_NAME"
+            else
+              echo "Only rules changed - updating scan"
+              
+              if gcloud dataplex datascans describe "$SCAN_NAME" \
+                  --location="${GCP_REGION}" \
+                  --project="${GCP_PROJECT_ID}" &>/dev/null; then
+                
+                gcloud dataplex datascans update data-quality "$SCAN_NAME" \
+                  --location="${GCP_REGION}" \
+                  --project="${GCP_PROJECT_ID}" \
+                  --data-quality-spec-file="$FOLDER/rules.yaml"
+                
+                echo "Updated: $SCAN_NAME"
+              else
+                echo "Scan does not exist - creating"
+                
+                gcloud dataplex datascans create data-quality "$SCAN_NAME" \
+                  --location="${GCP_REGION}" \
+                  --project="${GCP_PROJECT_ID}" \
+                  --data-source-resource="//bigquery.googleapis.com/projects/${GCP_PROJECT_ID}/datasets/${DATASET}/tables/${TABLE}" \
+                  --data-quality-spec-file="gs://${BUCKET_NAME}/config-yamls/${FOLDER_NAME}/rules.yaml" \
+                  --schedule="$SCHEDULE" \
+                  --description="$DESCRIPTION" \
+                  --display-name="$DISPLAY_NAME"
+                
+                echo "Created: $SCAN_NAME"
+              fi
             fi
           done
