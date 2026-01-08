@@ -2,9 +2,11 @@
 2. service account version +
 3. many yamls and jobs (create job using yaml name) +
 4. update version +
-5. give config to dataplex create (update) job
+5. give config to dataplex create (update) job +
 
 
 
-optimization
-ReadME
+6. optimize CI/CD code loops
+7. if dataset not canged, update not delete
+8. review how WIF with/without SA works
+9. ReadME
