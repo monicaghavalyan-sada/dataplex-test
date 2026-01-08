@@ -1,0 +1,5 @@
+dataset: reviews
+table: customer_reviews
+schedule: "0 3 * * *"
+description: "Daily quality scan for customer review data"
+display_name: "Customer Reviews Quality Scan"
