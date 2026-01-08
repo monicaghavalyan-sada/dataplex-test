@@ -32,8 +32,8 @@ jobs:
         uses: google-github-actions/auth@v3
         with:
           project_id: ${{ env.GCP_PROJECT_ID }}
-          workload_identity_provider: 'projects/437177264669/locations/global/workloadIdentityPools/github-pool-tf/providers/github-provider'
-          service_account: 'github-actions-sa@sada-tirayr.iam.gserviceaccount.com'
+          workload_identity_provider: ${{ secrets.WORKLOAD_IDENTITY_PROVIDER }}
+          service_account: ${{ secrets.SERVICE_ACCOUNT }}
       
       - name: Set up Cloud SDK
         uses: google-github-actions/setup-gcloud@v2
@@ -102,7 +102,7 @@ jobs:
                   --project="${GCP_PROJECT_ID}" \
                   --quiet
                 echo "Deleted: $SCAN_NAME"
-                sleep 5
+                sleep 300
               fi
               
               gcloud dataplex datascans create data-quality "$SCAN_NAME" \
