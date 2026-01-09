@@ -1,55 +1,54 @@
+# Project
+output "project_id" {
+  value = var.project_id
+}
+
+output "region" {
+  value = var.region
+}
+
+# Storage
 output "bucket_name" {
-  description = "Name of the Dataplex sources bucket"
-  value       = google_storage_bucket.dataplex_sources.name
+  value = google_storage_bucket.dataplex_sources.name
 }
 
-output "bucket_url" {
-  description = "URL of the Dataplex sources bucket"
-  value       = google_storage_bucket.dataplex_sources.url
-}
-
+# BigQuery
 output "dataplex_scans_dataset_id" {
-  description = "ID of the dataplex scans dataset"
-  value       = google_bigquery_dataset.dataplex_scans.dataset_id
+  value = google_bigquery_dataset.dataplex_scans.dataset_id
 }
 
-
+# Dataplex
 output "lake_name" {
-  description = "Name of the Dataplex lake"
-  value       = google_dataplex_lake.main.name
-}
-
-output "lake_id" {
-  description = "Full ID of the Dataplex lake"
-  value       = google_dataplex_lake.main.id
+  value = google_dataplex_lake.main.name
 }
 
 output "zone_name" {
-  description = "Name of the Dataplex zone"
-  value       = google_dataplex_zone.curated.name
-}
-
-output "zone_id" {
-  description = "Full ID of the Dataplex zone"
-  value       = google_dataplex_zone.curated.id
+  value = google_dataplex_zone.curated.name
 }
 
 output "asset_name" {
-  description = "Name of the Dataplex asset"
-  value       = google_dataplex_asset.sentiment_analysis.name
+  value = google_dataplex_asset.sentiment_analysis.name
 }
 
-output "asset_id" {
-  description = "Full ID of the Dataplex asset"
-  value       = google_dataplex_asset.sentiment_analysis.id
+# Service Accounts
+output "dataplex_service_account_email" {
+  value = google_service_account.dataplex_sa.email
 }
 
-output "service_account_email" {
-  description = "Email of the Dataplex service account"
-  value       = google_service_account.dataplex_sa.email
+output "github_actions_service_account_email" {
+  value = google_service_account.github_actions_sa.email
 }
 
-output "service_account_id" {
-  description = "ID of the Dataplex service account"
-  value       = google_service_account.dataplex_sa.id
+# Workload Identity
+output "workload_identity_provider_name" {
+  value = google_iam_workload_identity_pool_provider.github_provider.name
+}
+
+# GitHub Actions config
+output "github_actions_config" {
+  value = {
+    workload_identity_provider = google_iam_workload_identity_pool_provider.github_provider.name
+    service_account            = google_service_account.github_actions_sa.email
+    bucket_name                = google_storage_bucket.dataplex_sources.name
+  }
 }
