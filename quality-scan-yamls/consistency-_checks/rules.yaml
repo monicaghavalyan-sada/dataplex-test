@@ -2,7 +2,7 @@ rules:
   - rowConditionExpectation:
       sqlExpression: ABS((very_satisfied_pct + somewhat_satisfied_pct + neutral_pct + somewhat_dissatisfied_pct + very_dissatisfied_pct + pct_without_score_review) - 100) < 0.1
     dimension: CONSISTENCY
-    threshold: 0.2
+    threshold: 0.9
 
   - rowConditionExpectation:
       sqlExpression: ABS((score_5_pct + score_4_pct + score_3_pct + score_2_pct + score_1_pct + pct_without_score_review) - 100) < 0.1
