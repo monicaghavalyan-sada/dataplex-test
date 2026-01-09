@@ -79,11 +79,11 @@ jobs:
             
             TIMESTAMP=$(date +%Y%m%d_%H%M%S)
             GCS_PATH="gs://${BUCKET_NAME}/quality-scan-yamls/${FOLDER_NAME}"
-            gsutil -m cp \
-              "$FOLDER/rules.yaml" "$GCS_PATH/rules.yaml" \
-              "$FOLDER/config.yaml" "$GCS_PATH/config.yaml" \
-              "$FOLDER/rules.yaml" "$GCS_PATH/backups/rules_${TIMESTAMP}.yaml" \
-              "$FOLDER/config.yaml" "$GCS_PATH/backups/config_${TIMESTAMP}.yaml"
+            
+            gsutil cp "$FOLDER/rules.yaml" "$GCS_PATH/rules.yaml"
+            gsutil cp "$FOLDER/config.yaml" "$GCS_PATH/config.yaml"
+            gsutil cp "$FOLDER/rules.yaml" "$GCS_PATH/backups/rules_${TIMESTAMP}.yaml"
+            gsutil cp "$FOLDER/config.yaml" "$GCS_PATH/backups/config_${TIMESTAMP}.yaml"
             
             NEW_RESOURCE="//bigquery.googleapis.com/projects/${GCP_PROJECT_ID}/datasets/${DATASET}/tables/${TABLE}"
             
