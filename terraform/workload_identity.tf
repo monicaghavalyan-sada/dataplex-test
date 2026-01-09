@@ -20,7 +20,6 @@ resource "google_iam_workload_identity_pool_provider" "github_provider" {
   }
 
   attribute_condition = "assertion.repository_owner == 'monicaghavalyan-sada'"
-
   oidc {
     issuer_uri = "https://token.actions.githubusercontent.com"
   }
