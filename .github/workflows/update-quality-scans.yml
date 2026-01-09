@@ -66,21 +66,21 @@ jobs:
             fi
           
             CONFIG_VALUES=$(python3 << 'EOF'
-import yaml, sys, logging
-
-logging.basicConfig(level=logging.INFO, format='%(levelname)s: %(message)s')
-
-try:
-    with open('$FOLDER/config.yaml') as cf, open('$FOLDER/rules.yaml') as rf:
-        config = yaml.safe_load(cf)
-        yaml.safe_load(rf)
-        logging.info(f"Successfully loaded config from $FOLDER")
-        print(f"{config['dataset']}|{config['table']}|{config['schedule']}|{config['description']}|{config['display_name']}")
-except Exception as e:
-    logging.error(f"Failed to process YAML files: {e}")
-    sys.exit(1)
-EOF
-)
+            import yaml, sys, logging
+            
+            logging.basicConfig(level=logging.INFO, format='%(levelname)s: %(message)s')
+            
+            try:
+                with open('$FOLDER/config.yaml') as cf, open('$FOLDER/rules.yaml') as rf:
+                    config = yaml.safe_load(cf)
+                    yaml.safe_load(rf)
+                    logging.info(f"Successfully loaded config from $FOLDER")
+                    print(f"{config['dataset']}|{config['table']}|{config['schedule']}|{config['description']}|{config['display_name']}")
+            except Exception as e:
+                logging.error(f"Failed to process YAML files: {e}")
+                sys.exit(1)
+            EOF
+            )
             
             [ $? -ne 0 ] && exit 1
             
