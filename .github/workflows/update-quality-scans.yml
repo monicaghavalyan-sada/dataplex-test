@@ -1,0 +1,131 @@
+name: Update Dataplex Quality Scans
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'quality-scan-yamls/**/*.yaml'
+
+env:
+  GCP_PROJECT_ID: ${{ vars.GCP_PROJECT_ID }}
+  GCP_REGION: ${{ vars.GCP_REGION }}
+  BUCKET_NAME: ${{ vars.BUCKET_NAME }}
+
+jobs:
+  update-quality-scans:
+    name: Process Changed YAML Files
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: read
+      id-token: write
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 2
+
+      - name: Authenticate to GCP
+        uses: google-github-actions/auth@v3
+        with:
+          project_id: ${{ env.GCP_PROJECT_ID }}
+          workload_identity_provider: ${{ secrets.WORKLOAD_IDENTITY_PROVIDER }}
+          service_account: ${{ secrets.SERVICE_ACCOUNT }}
+
+      - name: Set up Cloud SDK
+        uses: google-github-actions/setup-gcloud@v2
+
+      - name: Get Changed Folders
+        id: changed-folders
+        run: |
+          CHANGED_FILES=$(git diff --name-only HEAD~1 HEAD | grep '^quality-scan-yamls/' || true)
+          
+          if [ -z "$CHANGED_FILES" ]; then
+            echo "No files changed, skipping"
+            exit 0
+          fi
+          
+          FOLDERS=$(echo "$CHANGED_FILES" | sed 's|/[^/]*$||' | sort -u | paste -sd ',' -)
+          echo "folders=$FOLDERS" >> $GITHUB_OUTPUT
+
+      - name: Process Each Folder
+        run: |
+          IFS=',' read -ra FOLDER_ARRAY <<< '${{ steps.changed-folders.outputs.folders }}'
+          
+          for FOLDER in "${FOLDER_ARRAY[@]}"; do
+            FOLDER_NAME=$(basename "$FOLDER")
+            
+            SCAN_NAME=$(echo "$FOLDER_NAME" | tr '[:upper:]' '[:lower:]' | sed 's/[^a-z0-9-]/-/g;s/-\+/-/g;s/^-//;s/-$//')-scan
+            echo "Processing folder: $FOLDER_NAME -> $SCAN_NAME"
+            
+            if [ ! -f "$FOLDER/config.yaml" ] || [ ! -f "$FOLDER/rules.yaml" ]; then
+              echo "ERROR: Missing config.yaml or rules.yaml in $FOLDER"
+              exit 1
+            fi
+          
+            python3 -c "import yaml; yaml.safe_load(open('$FOLDER/config.yaml')); yaml.safe_load(open('$FOLDER/rules.yaml'))" || exit 1
+            
+            DATASET=$(python3 -c "import yaml; print(yaml.safe_load(open('$FOLDER/config.yaml'))['dataset'])")
+            TABLE=$(python3 -c "import yaml; print(yaml.safe_load(open('$FOLDER/config.yaml'))['table'])")
+            SCHEDULE=$(python3 -c "import yaml; print(yaml.safe_load(open('$FOLDER/config.yaml'))['schedule'])")
+            DESCRIPTION=$(python3 -c "import yaml; print(yaml.safe_load(open('$FOLDER/config.yaml'))['description'])")
+            DISPLAY_NAME=$(python3 -c "import yaml; print(yaml.safe_load(open('$FOLDER/config.yaml'))['display_name'])")
+            
+            TIMESTAMP=$(date +%Y%m%d_%H%M%S)
+            GCS_PATH="gs://${BUCKET_NAME}/quality-scan-yamls/${FOLDER_NAME}"
+            
+            gsutil cp "$FOLDER/rules.yaml" "$GCS_PATH/rules.yaml"
+            gsutil cp "$FOLDER/config.yaml" "$GCS_PATH/config.yaml"
+            gsutil cp "$FOLDER/rules.yaml" "$GCS_PATH/backups/rules_${TIMESTAMP}.yaml"
+            gsutil cp "$FOLDER/config.yaml" "$GCS_PATH/backups/config_${TIMESTAMP}.yaml"
+            
+            NEW_RESOURCE="//bigquery.googleapis.com/projects/${GCP_PROJECT_ID}/datasets/${DATASET}/tables/${TABLE}"
+            
+            if gcloud dataplex datascans describe "$SCAN_NAME" \
+                --location="${GCP_REGION}" \
+                --project="${GCP_PROJECT_ID}" \
+                --format='value(data.resource)' 2>/dev/null | grep -q .; then
+              
+              CURRENT_RESOURCE=$(gcloud dataplex datascans describe "$SCAN_NAME" \
+                --location="${GCP_REGION}" \
+                --project="${GCP_PROJECT_ID}" \
+                --format='value(data.resource)')
+              
+              if [ "$CURRENT_RESOURCE" = "$NEW_RESOURCE" ]; then
+                echo "Scan exists, data source unchanged - updating rules only"
+                
+                gcloud dataplex datascans update data-quality "$SCAN_NAME" \
+                  --location="${GCP_REGION}" \
+                  --project="${GCP_PROJECT_ID}" \
+                  --data-quality-spec-file="$FOLDER/rules.yaml"
+                
+                echo "Updated: $SCAN_NAME"
+                continue 
+              fi
+              
+              echo "Scan exists but data source changed: $CURRENT_RESOURCE -> $NEW_RESOURCE"
+              echo "Deleting scan"
+              
+              gcloud dataplex datascans delete "$SCAN_NAME" \
+                --location="${GCP_REGION}" \
+                --project="${GCP_PROJECT_ID}" \
+                --quiet
+              
+              sleep 120
+            fi
+            
+            echo "Creating scan: $SCAN_NAME"
+            
+            gcloud dataplex datascans create data-quality "$SCAN_NAME" \
+              --location="${GCP_REGION}" \
+              --project="${GCP_PROJECT_ID}" \
+              --data-source-resource="$NEW_RESOURCE" \
+              --data-quality-spec-file="$GCS_PATH/rules.yaml" \
+              --schedule="$SCHEDULE" \
+              --description="$DESCRIPTION" \
+              --display-name="$DISPLAY_NAME"
+            
+            echo "Created: $SCAN_NAME"
+          done
