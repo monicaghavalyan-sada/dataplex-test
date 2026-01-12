@@ -1,5 +1,5 @@
 dataset: sentiment_analysis
 table: product_sentiment_summary
-schedule: "0 2 * * *"
+schedule: "0 5 * * *"
 description: "Consistency and logical quality checks"
 display_name: "Consistency Checks Scan"

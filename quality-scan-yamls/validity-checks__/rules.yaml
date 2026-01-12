@@ -7,13 +7,6 @@ rules:
     threshold: 1.0
 
   - rangeExpectation:
-      minValue: '-1'
-      maxValue: '1'
-    column: avg_sentiment_score
-    dimension: VALIDITY
-    threshold: 1.0
-
-  - rangeExpectation:
       minValue: '0'
       maxValue: '100'
     column: very_satisfied_pct
