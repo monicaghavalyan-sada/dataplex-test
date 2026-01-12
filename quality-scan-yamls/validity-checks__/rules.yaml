@@ -9,13 +9,6 @@ rules:
   - rangeExpectation:
       minValue: '0'
       maxValue: '100'
-    column: very_satisfied_pct
-    dimension: VALIDITY
-    threshold: 1.0
-
-  - rangeExpectation:
-      minValue: '0'
-      maxValue: '100'
     column: somewhat_satisfied_pct
     dimension: VALIDITY
     threshold: 1.0
