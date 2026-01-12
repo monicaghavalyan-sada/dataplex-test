@@ -3,7 +3,7 @@ name: Update Dataplex Quality Scans
 on:
   push:
     branches:
-      - testing
+      - main
     paths:
       - 'quality-scan-yamls/**/*.yaml'
 
