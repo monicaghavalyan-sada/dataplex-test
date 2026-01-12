@@ -1,5 +1,5 @@
 dataset: sentiment_analysis
 table: product_sentiment_summary
-schedule: "0 1 * * *"
+schedule: "0 3 * * *"
 description: "Daily quality scan for product sentiment data"
 display_name: "Product Sentiment Quality Scan"

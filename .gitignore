@@ -4,6 +4,7 @@
 crash.log
 *.tfplan
 .terraform.lock.hcl
+.terraform
 
 .vscode/
 .idea/

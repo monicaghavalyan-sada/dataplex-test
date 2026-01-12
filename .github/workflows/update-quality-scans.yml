@@ -3,7 +3,7 @@ name: Update Dataplex Quality Scans
 on:
   push:
     branches:
-      - main
+      - testing
     paths:
       - 'quality-scan-yamls/**/*.yaml'
 
@@ -55,31 +55,11 @@ jobs:
           IFS=',' read -ra FOLDER_ARRAY <<< '${{ steps.changed-folders.outputs.folders }}'
           
           for FOLDER in "${FOLDER_ARRAY[@]}"; do
-            FOLDER_NAME=$(basename "$FOLDER")
+            # Call helper script and capture output
+            SCRIPT_OUTPUT=$(bash .github/scripts/process-scan-config.sh "$FOLDER" "$BUCKET_NAME")
             
-            SCAN_NAME=$(echo "$FOLDER_NAME" | tr '[:upper:]' '[:lower:]' | sed 's/[^a-z0-9-]/-/g;s/-\+/-/g;s/^-//;s/-$//')-scan
-            echo "Processing folder: $FOLDER_NAME -> $SCAN_NAME"
-            
-            if [ ! -f "$FOLDER/config.yaml" ] || [ ! -f "$FOLDER/rules.yaml" ]; then
-              echo "ERROR: Missing config.yaml or rules.yaml in $FOLDER"
-              exit 1
-            fi
-          
-            python3 -c "import yaml; yaml.safe_load(open('$FOLDER/config.yaml')); yaml.safe_load(open('$FOLDER/rules.yaml'))" || exit 1
-            
-            DATASET=$(python3 -c "import yaml; print(yaml.safe_load(open('$FOLDER/config.yaml'))['dataset'])")
-            TABLE=$(python3 -c "import yaml; print(yaml.safe_load(open('$FOLDER/config.yaml'))['table'])")
-            SCHEDULE=$(python3 -c "import yaml; print(yaml.safe_load(open('$FOLDER/config.yaml'))['schedule'])")
-            DESCRIPTION=$(python3 -c "import yaml; print(yaml.safe_load(open('$FOLDER/config.yaml'))['description'])")
-            DISPLAY_NAME=$(python3 -c "import yaml; print(yaml.safe_load(open('$FOLDER/config.yaml'))['display_name'])")
-            
-            TIMESTAMP=$(date +%Y%m%d_%H%M%S)
-            GCS_PATH="gs://${BUCKET_NAME}/quality-scan-yamls/${FOLDER_NAME}"
-            
-            gsutil cp "$FOLDER/rules.yaml" "$GCS_PATH/rules.yaml"
-            gsutil cp "$FOLDER/config.yaml" "$GCS_PATH/config.yaml"
-            gsutil cp "$FOLDER/rules.yaml" "$GCS_PATH/backups/rules_${TIMESTAMP}.yaml"
-            gsutil cp "$FOLDER/config.yaml" "$GCS_PATH/backups/config_${TIMESTAMP}.yaml"
+            # Parse output into variables
+            eval "$SCRIPT_OUTPUT"
             
             NEW_RESOURCE="//bigquery.googleapis.com/projects/${GCP_PROJECT_ID}/datasets/${DATASET}/tables/${TABLE}"
             
