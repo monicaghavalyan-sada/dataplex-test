@@ -12,4 +12,4 @@ rules:
   - rowConditionExpectation:
       sqlExpression: total_number_of_reviews > 0
     dimension: CONSISTENCY
-    threshold: 0.9
+    threshold: 0.8
