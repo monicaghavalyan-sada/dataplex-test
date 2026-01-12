@@ -1,0 +1,49 @@
+rules:
+  - rangeExpectation:
+      minValue: '0'
+      maxValue: '5'
+    column: avg_review_score
+    dimension: VALIDITY
+    threshold: 1.0
+
+  - rangeExpectation:
+      minValue: '-1'
+      maxValue: '1'
+    column: avg_sentiment_score
+    dimension: VALIDITY
+    threshold: 1.0
+
+  - rangeExpectation:
+      minValue: '0'
+      maxValue: '100'
+    column: very_satisfied_pct
+    dimension: VALIDITY
+    threshold: 1.0
+
+  - rangeExpectation:
+      minValue: '0'
+      maxValue: '100'
+    column: somewhat_satisfied_pct
+    dimension: VALIDITY
+    threshold: 1.0
+
+  - rangeExpectation:
+      minValue: '0'
+      maxValue: '100'
+    column: neutral_pct
+    dimension: VALIDITY
+    threshold: 1.0
+
+  - rangeExpectation:
+      minValue: '0'
+      maxValue: '100'
+    column: somewhat_dissatisfied_pct
+    dimension: VALIDITY
+    threshold: 1.0
+
+  - rangeExpectation:
+      minValue: '0'
+      maxValue: '100'
+    column: very_dissatisfied_pct
+    dimension: VALIDITY
+    threshold: 1.0
