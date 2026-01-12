@@ -65,7 +65,6 @@ jobs:
               exit 1
             fi
           
-            # Validate and extract config values
             python3 -c "import yaml; yaml.safe_load(open('$FOLDER/config.yaml')); yaml.safe_load(open('$FOLDER/rules.yaml'))" || exit 1
             
             DATASET=$(python3 -c "import yaml; print(yaml.safe_load(open('$FOLDER/config.yaml'))['dataset'])")
@@ -74,7 +73,6 @@ jobs:
             DESCRIPTION=$(python3 -c "import yaml; print(yaml.safe_load(open('$FOLDER/config.yaml'))['description'])")
             DISPLAY_NAME=$(python3 -c "import yaml; print(yaml.safe_load(open('$FOLDER/config.yaml'))['display_name'])")
             
-            # Upload files to GCS
             TIMESTAMP=$(date +%Y%m%d_%H%M%S)
             GCS_PATH="gs://${BUCKET_NAME}/quality-scan-yamls/${FOLDER_NAME}"
             
@@ -85,7 +83,6 @@ jobs:
             
             NEW_RESOURCE="//bigquery.googleapis.com/projects/${GCP_PROJECT_ID}/datasets/${DATASET}/tables/${TABLE}"
             
-            # Check if scan exists
             if gcloud dataplex datascans describe "$SCAN_NAME" \
                 --location="${GCP_REGION}" \
                 --project="${GCP_PROJECT_ID}" \
