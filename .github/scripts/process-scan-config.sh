@@ -20,7 +20,7 @@ if [ ! -f "$FOLDER/config.yaml" ] || [ ! -f "$FOLDER/rules.yaml" ]; then
   exit 1
 fi
 
-# Validate and extract all config values in one Python call
+# Validate and extract all config values in a Python call
 CONFIG_VALUES=$(python3 -c "
 import yaml
 import sys
