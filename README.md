@@ -9,45 +9,62 @@ The infrastructure is fully codified in Terraform, and authentication uses Workl
 ## Architecture
 
 ```
-┌─────────────────────────────────────────────────────────────────┐
-│                         GitHub Repository                        │
-│  ┌────────────────────┐              ┌─────────────────────┐   │
-│  │ quality-scan-yamls/│              │  GitHub Actions     │   │
-│  │  ├── scan-1/       │   Push to    │  ┌───────────────┐ │   │
-│  │  │  ├── config.yaml├──────main───►│  │ Authenticate  │ │   │
-│  │  │  └── rules.yaml │              │  │  via WIF      │ │   │
-│  │  └── scan-2/       │              │  └───────┬───────┘ │   │
-│  │     ├── config.yaml│              │          │         │   │
-│  │     └── rules.yaml │              │  ┌───────▼───────┐ │   │
-│  └────────────────────┘              │  │ Process YAMLs │ │   │
-│                                       │  │ Upload to GCS │ │   │
-│                                       │  └───────┬───────┘ │   │
-└───────────────────────────────────────────────┬─────────────────┘
-                                                │
-                    ┌───────────────────────────▼────────────────────┐
-                    │         Google Cloud Platform                  │
-                    │                                                │
-                    │  ┌─────────────┐  ┌──────────────────────┐   │
-                    │  │ Workload    │  │  Service Account     │   │
-                    │  │ Identity    ├─►│  github-actions-sa   │   │
-                    │  │ Federation  │  └──────────┬───────────┘   │
-                    │  └─────────────┘             │               │
-                    │                               │               │
-                    │  ┌────────────────────────────▼─────────┐    │
-                    │  │         Dataplex Lake               │    │
-                    │  │  ┌──────────────────────────────┐   │    │
-                    │  │  │   Data Quality Scans         │   │    │
-                    │  │  │   ├── scan-1-scan           │   │    │
-                    │  │  │   └── scan-2-scan           │   │    │
-                    │  │  └──────────────────────────────┘   │    │
-                    │  └──────────────────────────────────────┘    │
-                    │                                                │
-                    │  ┌─────────────┐  ┌─────────────────────┐   │
-                    │  │ GCS Bucket  │  │  BigQuery Datasets  │   │
-                    │  │ (configs +  │  │  ├── Source data    │   │
-                    │  │  backups)   │  │  └── Scan results   │   │
-                    │  └─────────────┘  └─────────────────────┘   │
-                    └────────────────────────────────────────────────┘
+                    GitHub Repository
+         ┌──────────────────────────────────────┐
+         │                                      │
+         │  quality-scan-yamls/                 │
+         │    ├── scan-1/                       │
+         │    │   ├── config.yaml               │
+         │    │   └── rules.yaml                │
+         │    └── scan-2/                       │
+         │        ├── config.yaml               │
+         │        └── rules.yaml                │
+         │                                      │
+         └───────────────┬──────────────────────┘
+                         │
+                    Push to main
+                         │
+                         ▼
+              ┌─────────────────────┐
+              │  GitHub Actions     │
+              │                     │
+              │  1. Authenticate    │
+              │     via WIF         │
+              │                     │
+              │  2. Process YAMLs   │
+              │     Upload to GCS   │
+              │                     │
+              └──────────┬──────────┘
+                         │
+                         ▼
+         ┌──────────────────────────────────────┐
+         │     Google Cloud Platform            │
+         │                                      │
+         │  ┌──────────────┐   ┌──────────────┐ │
+         │  │  Workload    │──▶│   Service    │ │
+         │  │  Identity    │   │   Account    │ │
+         │  │  Federation  │   │ github-sa    │ │
+         │  └──────────────┘   └──────┬───────┘ │
+         │                            │         │
+         │           ┌────────────────┘         │
+         │           ▼                          │
+         │  ┌──────────────────────────────┐    │
+         │  │      Dataplex Lake           │    │
+         │  │                              │    │
+         │  │   Data Quality Scans:        │    │
+         │  │     • scan-1-scan            │    │
+         │  │     • scan-2-scan            │    │
+         │  │                              │    │
+         │  └──────────────────────────────┘    │
+         │                                      │
+         │  ┌─────────────┐  ┌────────────────┐ │
+         │  │ GCS Bucket  │  │    BigQuery    │ │
+         │  │             │  │                │ │
+         │  │ • configs   │  │ • Source data  │ │
+         │  │ • backups   │  │ • Scan results │ │
+         │  └─────────────┘  └────────────────┘ │
+         │                                      │
+         └──────────────────────────────────────┘
 ```
 
 The flow is straightforward: you push YAML changes to GitHub, which triggers the workflow. The workflow authenticates to GCP, processes your configuration files, uploads them to GCS, and then either creates new scans or updates existing ones based on what changed.
