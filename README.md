@@ -262,7 +262,7 @@ git commit -m "Add customer quality scan"
 git push
 ```
 
-The folder name gets sanitized to create the scan name (lowercase, special characters become hyphens, `-scan` suffix added).
+The folder name is used directly as the scan name and must contain only lowercase/uppercase letters, numbers, and hyphens. If the folder name doesn't meet these requirements, the workflow will fail.
 
 **Updating Rules:**
 Edit `rules.yaml` to adjust thresholds or add checks, then push. The scan updates without losing history.
