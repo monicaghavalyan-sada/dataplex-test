@@ -10,9 +10,14 @@ if [ -z "$FOLDER" ] || [ -z "$BUCKET_NAME" ]; then
 fi
 
 FOLDER_NAME=$(basename "$FOLDER")
-SCAN_NAME=$(echo "$FOLDER_NAME" | tr '[:upper:]' '[:lower:]' | sed 's/[^a-z0-9-]/-/g;s/-\+/-/g;s/^-//;s/-$//')-scan
 
-echo "Processing folder: $FOLDER_NAME -> $SCAN_NAME" >&2
+echo "Processing folder: $FOLDER_NAME" >&2
+
+# Validate scan name format
+if ! [[ "$FOLDER_NAME" =~ ^[a-z0-9-]+$ ]]; then
+  echo "ERROR: Invalid folder name '$FOLDER_NAME' - must contain only lowercase letters, numbers, and hyphens" >&2
+  exit 1
+fi
 
 # Validate files exist
 if [ ! -f "$FOLDER/config.yaml" ] || [ ! -f "$FOLDER/rules.yaml" ]; then
@@ -52,7 +57,7 @@ for file in rules.yaml config.yaml; do
 done
 
 # Output variables for main workflow (stdout only, no directory paths)
-echo "SCAN_NAME=\"$SCAN_NAME\""
+echo "SCAN_NAME=\"$FOLDER_NAME\""
 echo "DATASET=\"$DATASET\""
 echo "TABLE=\"$TABLE\""
 echo "SCHEDULE=\"$SCHEDULE\""
